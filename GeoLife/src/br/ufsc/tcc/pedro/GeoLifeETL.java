@@ -69,7 +69,7 @@ public class GeoLifeETL {
 					Statement.RETURN_GENERATED_KEYS);
 			psSelectTransportationMean = conn.prepareStatement("SELECT idTransportationMean FROM TransportationMean WHERE description = ?");
 			psInsertSemanticPoint = conn.prepareStatement(
-					"INSERT INTO SemanticPoint SET idSemanticSubTrajectory = ?, timestamp = ?, the_geom = GeomFromText(?)",
+					"INSERT INTO SemanticPoint SET idSemanticSubTrajectory = ?, timestamp = ?, the_geom = GeomFromText(?, 4362)",
 					Statement.RETURN_GENERATED_KEYS);
 			conn.setAutoCommit(false);
 		} catch (Exception e) {
@@ -128,7 +128,7 @@ public class GeoLifeETL {
 				}
 				psInsertSemanticPoint.setInt(1, subTrajectoryId);
 				psInsertSemanticPoint.setTimestamp(2, new Timestamp(timestamp.getTime()));
-				psInsertSemanticPoint.setString(3, String.format(Locale.ENGLISH, "POINT(%f %f)", latitude, longitude));
+				psInsertSemanticPoint.setString(3, String.format(Locale.ENGLISH, "POINT(%f %f)", longitude, latitude));
 				psInsertSemanticPoint.executeUpdate();
 			}
 		}
@@ -238,7 +238,7 @@ public class GeoLifeETL {
 		}
 	}
 
-	@Test
+//	@Test
 	public void testProcessDataDit() {
 		try {
 			processMainDir("C:\\Users\\pedro\\Ubuntu One\\TCC\\GeoLife\\Geolife Trajectories 1.2\\Data");
@@ -253,6 +253,46 @@ public class GeoLifeETL {
 		}
 	}
 
+	@Test
+	public void populateSubtrajectoriLine() {
+		try {
+			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM SemanticSubTrajectory ORDER BY idSemanticSubTrajectory");
+			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE SemanticSubTrajectory SET the_geom = GeomFromText(?, 4362) WHERE idSemanticSubTrajectory = ?");
+			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT AsText(the_geom) FROM SemanticPoint WHERE idSemanticSubTrajectory = ? ORDER BY timestamp");
+			ResultSet rsSelectSub = psSelectSub.executeQuery();
+			while (rsSelectSub.next()) {
+				int idSub = rsSelectSub.getInt("idSemanticSubTrajectory");
+				System.out.println(idSub);
+				psSelectPoints.setInt(1, idSub);
+				ResultSet rsSelectPoints = psSelectPoints.executeQuery();
+				StringBuffer pointsBuffer = new StringBuffer();
+				while (rsSelectPoints.next()) {
+					if (pointsBuffer.length() == 0) {
+						pointsBuffer.append("LINESTRING(");
+					} else {
+						pointsBuffer.append(",");
+					}
+					pointsBuffer.append(rsSelectPoints.getString(1).replace("POINT(", "").replace(")", ""));
+				}
+				rsSelectPoints.close();
+				if (pointsBuffer.length() > 0) {
+					pointsBuffer.append(")");
+					psUpdateSub.setString(1, pointsBuffer.toString());
+					psUpdateSub.setInt(2, idSub);
+					psUpdateSub.executeUpdate();
+					conn.commit();
+				}
+			}
+		} catch (Exception e) {
+			try {
+				conn.rollback();
+			} catch (SQLException sqle) {
+				throw new RuntimeException("Fatal error during program execution!", sqle);
+			}
+			fail();
+		}
+	}
+	
 	private class SemanticSubTrajectory {
 		
 		int id = 0;
