@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.SimpleTimeZone;
 import java.util.TimeZone;
@@ -127,7 +128,7 @@ public class GeoLifeETL {
 				}
 				psInsertSemanticPoint.setInt(1, subTrajectoryId);
 				psInsertSemanticPoint.setTimestamp(2, new Timestamp(timestamp.getTime()));
-				psInsertSemanticPoint.setString(3, String.format("POINT(%f %f)", latitude, longitude));
+				psInsertSemanticPoint.setString(3, String.format(Locale.ENGLISH, "POINT(%f %f)", latitude, longitude));
 				psInsertSemanticPoint.executeUpdate();
 			}
 		}
