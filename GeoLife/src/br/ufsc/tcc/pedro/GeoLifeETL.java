@@ -1,5 +1,7 @@
 package br.ufsc.tcc.pedro;
 
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -25,15 +26,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.omg.PortableServer.IdUniquenessPolicyValue;
-
-import static org.junit.Assert.*;
 public class GeoLifeETL {
 
 	private Map<String, Integer> transportationMeans = new HashMap<String, Integer>();
@@ -69,7 +66,7 @@ public class GeoLifeETL {
 					Statement.RETURN_GENERATED_KEYS);
 			psSelectTransportationMean = conn.prepareStatement("SELECT idTransportationMean FROM TransportationMean WHERE description = ?");
 			psInsertSemanticPoint = conn.prepareStatement(
-					"INSERT INTO SemanticPoint SET idSemanticSubTrajectory = ?, timestamp = ?, the_geom = GeomFromText(?, 4362)",
+					"INSERT INTO SemanticPoint SET idSemanticSubTrajectory = ?, timestamp = ?, the_geom = GeomFromText(?, 4326)",
 					Statement.RETURN_GENERATED_KEYS);
 			conn.setAutoCommit(false);
 		} catch (Exception e) {
@@ -106,8 +103,9 @@ public class GeoLifeETL {
 	private void processTrajectories(int idObject, File dataDir, List<SemanticSubTrajectory> semanticSubTrajectoryCandidates) 
 			throws SQLException, IOException, ParseException {
 		Path path = FileSystems.getDefault().getPath(dataDir.getAbsolutePath(), "Trajectory");
-		idSemanticTrajectory = null;
 		for (File trajectoryFile : path.toFile().listFiles()) {
+			idSemanticTrajectory = null;
+			List<SemanticSubTrajectory> localSemanticSubTrajectoryCandidates = cloneArray(semanticSubTrajectoryCandidates);
 			System.out.println(trajectoryFile.getAbsolutePath());
 			BufferedReader reader = Files.newBufferedReader(trajectoryFile.toPath(), StandardCharsets.UTF_8);
 			int lineCount = 0;
@@ -122,7 +120,7 @@ public class GeoLifeETL {
 				double longitude = Double.parseDouble(fields[1]);
 				double altitude = Double.parseDouble(fields[2]);
 				Date timestamp = dateFormat.parse(fields[5].replace("-", "/") + " " + fields[6]);
-				int subTrajectoryId = findSubTrajectory(idObject, timestamp, semanticSubTrajectoryCandidates);
+				int subTrajectoryId = findSubTrajectory(idObject, timestamp, localSemanticSubTrajectoryCandidates);
 				if (subTrajectoryId == 0) {
 					continue;
 				}
@@ -132,6 +130,18 @@ public class GeoLifeETL {
 				psInsertSemanticPoint.executeUpdate();
 			}
 		}
+	}
+
+	private List<SemanticSubTrajectory> cloneArray(List<SemanticSubTrajectory> semanticSubTrajectoryCandidates) {
+		List<SemanticSubTrajectory> cloned = new ArrayList<SemanticSubTrajectory>();
+		for (SemanticSubTrajectory semanticSubTrajectory : semanticSubTrajectoryCandidates) {
+			SemanticSubTrajectory semanticSubTrajectoryCloned = new SemanticSubTrajectory();
+			semanticSubTrajectoryCloned.endTime = semanticSubTrajectory.endTime;
+			semanticSubTrajectoryCloned.startTime = semanticSubTrajectory.startTime;
+			semanticSubTrajectoryCloned.transportationMean = semanticSubTrajectory.transportationMean;
+			cloned.add(semanticSubTrajectoryCloned);
+		}
+		return cloned;
 	}
 
 	private int findSubTrajectory(int idObject, Date timestamp,
@@ -254,7 +264,7 @@ public class GeoLifeETL {
 	}
 
 	@Test
-	public void populateSubtrajectoriLine() {
+	public void populateSubtrajectoryLine() {
 		try {
 			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM SemanticSubTrajectory ORDER BY idSemanticSubTrajectory");
 			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE SemanticSubTrajectory SET the_geom = GeomFromText(?, 4362) WHERE idSemanticSubTrajectory = ?");
