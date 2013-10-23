@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="E:/desenvolvimento/mysql-connector-java-5.1.26/mysql-connector-java-5.1.26-bin.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/pedro/.m2/repository/postgresql/postgresql/8.4-701.jdbc4/postgresql-8.4-701.jdbc4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

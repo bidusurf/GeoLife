@@ -53,21 +53,22 @@ public class GeoLifeETL {
 	@BeforeClass
 	public static void setupDriver() {
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
-			conn = DriverManager.getConnection("jdbc:mysql://192.168.1.145:3306/tcc", "pedro", "bidu1");
-			psSelectObject = conn.prepareStatement("SELECT idObject FROM Object WHERE name = ?");
-			psInsertObject = conn.prepareStatement("INSERT INTO Object SET name = ?", Statement.RETURN_GENERATED_KEYS);
-			psInsertSemanticTrajectory = conn.prepareStatement("INSERT INTO SemanticTrajectory SET idObject = ?", 
+//			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName("org.postgresql.Driver");
+//				conn = DriverManager.getConnection("jdbc:mysql://192.168.1.145:3306/tcc", "pedro", "bidu1");
+			conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.105:5432/geolife", "postgres", "postgres");
+			psSelectObject = conn.prepareStatement("SELECT \"idObject\" FROM \"Object\" WHERE name = ?");
+			psInsertObject = conn.prepareStatement("INSERT INTO \"Object\" (name) values (?)", Statement.RETURN_GENERATED_KEYS);
+			psInsertSemanticTrajectory = conn.prepareStatement("INSERT INTO \"SemanticTrajectory\" (\"idObject\") values (?)", 
 					Statement.RETURN_GENERATED_KEYS);
 			psInsertSemanticSubTrajectory = conn.prepareStatement(
-					"INSERT INTO SemanticSubTrajectory SET idSemanticTrajectory = ?, startTime = ?, endTime = ?, idTransportationMean = ?",
+					"INSERT INTO \"SemanticSubTrajectory\" (\"idSemanticTrajectory\", \"startTime\", \"endTime\", \"idTransportationMean\") values (?,?,?,?)",
 					Statement.RETURN_GENERATED_KEYS);
-			psInsertTransportationMean = conn.prepareStatement("INSERT INTO TransportationMean SET description = ?", 
+			psInsertTransportationMean = conn.prepareStatement("INSERT INTO \"TransportationMean\" (description) values (?)", 
 					Statement.RETURN_GENERATED_KEYS);
-			psSelectTransportationMean = conn.prepareStatement("SELECT idTransportationMean FROM TransportationMean WHERE description = ?");
+			psSelectTransportationMean = conn.prepareStatement("SELECT \"idTransportationMean\" FROM \"TransportationMean\" WHERE description = ?");
 			psInsertSemanticPoint = conn.prepareStatement(
-					"INSERT INTO SemanticPoint SET idSemanticSubTrajectory = ?, timestamp = ?, the_geom = GeomFromText(?, 4326)",
-					Statement.RETURN_GENERATED_KEYS);
+					"INSERT INTO \"SemanticPoint\" (\"idSemanticSubTrajectory\", timestamp, the_geom) values (?, ?,  ST_GeometryFromText(?, 4326))");
 			conn.setAutoCommit(false);
 		} catch (Exception e) {
 			fail();
@@ -226,7 +227,7 @@ public class GeoLifeETL {
 				int idObject;
 				psSelectObject.setString(1, dataDir.getName());
 				ResultSet rsSelectObject = psSelectObject.executeQuery();
-				if (rsSelectObject.first()) {
+				if (rsSelectObject.next()) {
 					idObject = rsSelectObject.getInt("idObject");
 					rsSelectObject.close();
 				} else {
@@ -254,6 +255,7 @@ public class GeoLifeETL {
 			processMainDir("C:\\Users\\pedro\\Ubuntu One\\TCC\\GeoLife\\Geolife Trajectories 1.2\\Data");
 			conn.commit();
 		} catch (Exception e) {
+			e.printStackTrace();
 			try {
 				conn.rollback();
 			} catch (SQLException sqle) {
@@ -266,9 +268,9 @@ public class GeoLifeETL {
 	@Test
 	public void populateSubtrajectoryLine() {
 		try {
-			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM SemanticSubTrajectory ORDER BY idSemanticSubTrajectory");
-			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE SemanticSubTrajectory SET the_geom = GeomFromText(?, 4362) WHERE idSemanticSubTrajectory = ?");
-			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT AsText(the_geom) FROM SemanticPoint WHERE idSemanticSubTrajectory = ? ORDER BY timestamp");
+			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM \"SemanticSubTrajectory\" ORDER BY \"idSemanticSubTrajectory\"");
+			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE \"SemanticSubTrajectory\" SET the_geom = ST_GeometryFromText(?, 4326) WHERE \"idSemanticSubTrajectory\" = ?");
+			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"SemanticPoint\" WHERE \"idSemanticSubTrajectory\" = ? ORDER BY timestamp");
 			ResultSet rsSelectSub = psSelectSub.executeQuery();
 			while (rsSelectSub.next()) {
 				int idSub = rsSelectSub.getInt("idSemanticSubTrajectory");
@@ -294,6 +296,7 @@ public class GeoLifeETL {
 				}
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
 			try {
 				conn.rollback();
 			} catch (SQLException sqle) {
