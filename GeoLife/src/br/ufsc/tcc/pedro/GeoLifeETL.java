@@ -291,8 +291,17 @@ public class GeoLifeETL {
 					pointsBuffer.append(")");
 					psUpdateSub.setString(1, pointsBuffer.toString());
 					psUpdateSub.setInt(2, idSub);
-					psUpdateSub.executeUpdate();
-					conn.commit();
+					try {
+						psUpdateSub.executeUpdate();
+						conn.commit();
+					} catch (Exception e) {
+						e.printStackTrace();
+						try {
+							conn.rollback();
+						} catch (SQLException sqle) {
+							throw new RuntimeException("Fatal error during program execution!", sqle);
+						}
+					}
 				}
 			}
 		} catch (Exception e) {
