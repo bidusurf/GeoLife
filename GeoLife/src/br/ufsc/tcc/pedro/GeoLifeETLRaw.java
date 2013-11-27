@@ -136,7 +136,7 @@ public class GeoLifeETLRaw {
 		}
 	}
 
-	@Test
+//	@Test
 	public void testProcessDataDit() {
 		try {
 			processMainDir("C:\\Users\\pedro\\Ubuntu One\\TCC\\GeoLife\\Geolife Trajectories 1.2\\Data");
@@ -152,17 +152,17 @@ public class GeoLifeETLRaw {
 		}
 	}
 
-//	@Test
+	@Test
 	public void populateSubtrajectoryLine() {
 		try {
-			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM \"SemanticSubTrajectory\" ORDER BY \"idSemanticSubTrajectory\"");
-			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE \"SemanticSubTrajectory\" SET the_geom = ST_GeometryFromText(?, 4326) WHERE \"idSemanticSubTrajectory\" = ?");
-			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"SemanticPoint\" WHERE \"idSemanticSubTrajectory\" = ? ORDER BY timestamp");
-			ResultSet rsSelectSub = psSelectSub.executeQuery();
+			PreparedStatement psSelectTrajectory = conn.prepareStatement("SELECT * FROM \"RawTrajectory\" ORDER BY \"idRawTrajectory\"");
+			PreparedStatement psUpdateTrajectory = conn.prepareStatement("UPDATE \"RawTrajectory\" SET the_geom = ST_GeometryFromText(?, 4326) WHERE \"idRawTrajectory\" = ?");
+			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"RawPoint\" WHERE \"idRawTrajectory\" = ? ORDER BY timestamp");
+			ResultSet rsSelectSub = psSelectTrajectory.executeQuery();
 			while (rsSelectSub.next()) {
-				int idSub = rsSelectSub.getInt("idSemanticSubTrajectory");
-				System.out.println(idSub);
-				psSelectPoints.setInt(1, idSub);
+				int idTrajectory = rsSelectSub.getInt("idRawTrajectory");
+				System.out.println(idTrajectory);
+				psSelectPoints.setInt(1, idTrajectory);
 				ResultSet rsSelectPoints = psSelectPoints.executeQuery();
 				StringBuffer pointsBuffer = new StringBuffer();
 				while (rsSelectPoints.next()) {
@@ -176,10 +176,10 @@ public class GeoLifeETLRaw {
 				rsSelectPoints.close();
 				if (pointsBuffer.length() > 0) {
 					pointsBuffer.append(")");
-					psUpdateSub.setString(1, pointsBuffer.toString());
-					psUpdateSub.setInt(2, idSub);
+					psUpdateTrajectory.setString(1, pointsBuffer.toString());
+					psUpdateTrajectory.setInt(2, idTrajectory);
 					try {
-						psUpdateSub.executeUpdate();
+						psUpdateTrajectory.executeUpdate();
 						conn.commit();
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -200,16 +200,5 @@ public class GeoLifeETLRaw {
 			}
 			fail();
 		}
-	}
-	
-	private class SemanticSubTrajectory {
-		
-		int id = 0;
-		
-		Date startTime;
-		
-		Date endTime;
-		
-		String transportationMean;
 	}
 }
