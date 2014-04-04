@@ -157,7 +157,7 @@ public class GeoLifeETLRaw {
 		try {
 			PreparedStatement psSelectTrajectory = conn.prepareStatement("SELECT * FROM \"RawTrajectory\" ORDER BY \"idRawTrajectory\"");
 			PreparedStatement psUpdateTrajectory = conn.prepareStatement("UPDATE \"RawTrajectory\" SET the_geom = ST_GeometryFromText(?, 4326) WHERE \"idRawTrajectory\" = ?");
-			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"RawPoint\" WHERE \"idRawTrajectory\" = ? ORDER BY timestamp");
+			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"RawPoint\" WHERE \"idRawTrajectory\" = ? ORDER BY \"idRawPoint\"");
 			ResultSet rsSelectSub = psSelectTrajectory.executeQuery();
 			while (rsSelectSub.next()) {
 				int idTrajectory = rsSelectSub.getInt("idRawTrajectory");

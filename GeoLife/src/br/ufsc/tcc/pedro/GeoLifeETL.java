@@ -86,17 +86,17 @@ public class GeoLifeETL {
 		BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
 		String line;
 		List<SemanticSubTrajectory> semanticSubTrajectoryCandidates = new ArrayList<SemanticSubTrajectory>();
-//		while ((line = reader.readLine()) != null) {
-//			if (line.contains("Start")) {
-//				continue;
-//			}
-//			String[] fields = line.split("\t");
-//			SemanticSubTrajectory semanticSubTrajectory = new SemanticSubTrajectory();
-//			semanticSubTrajectory.startTime = dateFormat. parse(fields[0]);
-//			semanticSubTrajectory.endTime = dateFormat.parse(fields[1]);
-//			semanticSubTrajectory.transportationMean = fields[2];
-//			semanticSubTrajectoryCandidates.add(semanticSubTrajectory);
-//		}
+		while ((line = reader.readLine()) != null) {
+			if (line.contains("Start")) {
+				continue;
+			}
+			String[] fields = line.split("\t");
+			SemanticSubTrajectory semanticSubTrajectory = new SemanticSubTrajectory();
+			semanticSubTrajectory.startTime = dateFormat. parse(fields[0]);
+			semanticSubTrajectory.endTime = dateFormat.parse(fields[1]);
+			semanticSubTrajectory.transportationMean = fields[2];
+			semanticSubTrajectoryCandidates.add(semanticSubTrajectory);
+		}
 
 		processTrajectories(idObject, dataDir, semanticSubTrajectoryCandidates);
 		conn.commit();
@@ -107,8 +107,8 @@ public class GeoLifeETL {
 		Path path = FileSystems.getDefault().getPath(dataDir.getAbsolutePath(), "Trajectory");
 		for (File trajectoryFile : path.toFile().listFiles()) {
 			idSemanticTrajectory = null;
-//			List<SemanticSubTrajectory> localSemanticSubTrajectoryCandidates = cloneArray(semanticSubTrajectoryCandidates);
-//			System.out.println(trajectoryFile.getAbsolutePath());
+			List<SemanticSubTrajectory> localSemanticSubTrajectoryCandidates = cloneArray(semanticSubTrajectoryCandidates);
+			System.out.println(trajectoryFile.getAbsolutePath());
 			BufferedReader reader = Files.newBufferedReader(trajectoryFile.toPath(), StandardCharsets.UTF_8);
 			int lineCount = 0;
 			String line;
@@ -118,23 +118,25 @@ public class GeoLifeETL {
 					continue;
 				}
 				String[] fields = line.split(",");
-//				System.out.print("\r" + ++insPoints);
+				System.out.print("\r" + ++insPoints);
 				double latitude = Double.parseDouble(fields[0]);
 				double longitude = Double.parseDouble(fields[1]);
-				double altitude = Double.parseDouble(fields[2]);
+				latitude = latitude < -180 || latitude > 180 ? latitude / 10.0 : latitude;
+				longitude = longitude < -180 || longitude > 180 ? longitude / 10.0 : longitude;
+//				double altitude = Double.parseDouble(fields[2]);
 				minLat = Math.min(minLat, latitude);
 				maxLat = Math.max(maxLat, latitude);
 				minLon = Math.min(minLon, longitude);
 				maxLon = Math.max(maxLon, longitude);
-//				Date timestamp = dateFormat.parse(fields[5].replace("-", "/") + " " + fields[6]);
-//				int subTrajectoryId = findSubTrajectory(idObject, timestamp, localSemanticSubTrajectoryCandidates);
-//				if (subTrajectoryId == 0) {
-//					continue;
-//				}
-//				psInsertSemanticPoint.setInt(1, subTrajectoryId);
-//				psInsertSemanticPoint.setTimestamp(2, new Timestamp(timestamp.getTime()));
-//				psInsertSemanticPoint.setString(3, String.format(Locale.ENGLISH, "POINT(%f %f)", longitude, latitude));
-//				psInsertSemanticPoint.executeUpdate();
+				Date timestamp = dateFormat.parse(fields[5].replace("-", "/") + " " + fields[6]);
+				int subTrajectoryId = findSubTrajectory(idObject, timestamp, localSemanticSubTrajectoryCandidates);
+				if (subTrajectoryId == 0) {
+					continue;
+				}
+				psInsertSemanticPoint.setInt(1, subTrajectoryId);
+				psInsertSemanticPoint.setTimestamp(2, new Timestamp(timestamp.getTime()));
+				psInsertSemanticPoint.setString(3, String.format(Locale.ENGLISH, "POINT(%f %f)", longitude, latitude));
+				psInsertSemanticPoint.executeUpdate();
 			}
 		}
 	}
@@ -231,33 +233,33 @@ public class GeoLifeETL {
 		for (File dataDir : mainDir.listFiles()) {
 			if (dataDir.isDirectory() && Arrays.asList(dataDir.list()).contains("labels.txt")) {
 				int idObject = 0;
-//				psSelectObject.setString(1, dataDir.getName());
-//				ResultSet rsSelectObject = psSelectObject.executeQuery();
-//				if (rsSelectObject.next()) {
-//					idObject = rsSelectObject.getInt("idObject");
-//					rsSelectObject.close();
-//				} else {
-//					psInsertObject.setString(1, dataDir.getName());
-//					if (psInsertObject.executeUpdate() > 0) {
-//						ResultSet generatedKeys = psInsertObject.getGeneratedKeys();
-//						if (generatedKeys.next()) {
-//							idObject = generatedKeys.getInt(1);
-//							generatedKeys.close();
-//						} else {
-//							throw new SQLException("Erro ao inserir em Object");
-//						}
-//					} else {
-//						throw new SQLException("Erro ao inserir em Object");
-//					}
-//				}
+				psSelectObject.setString(1, dataDir.getName());
+				ResultSet rsSelectObject = psSelectObject.executeQuery();
+				if (rsSelectObject.next()) {
+					idObject = rsSelectObject.getInt("idObject");
+					rsSelectObject.close();
+				} else {
+					psInsertObject.setString(1, dataDir.getName());
+					if (psInsertObject.executeUpdate() > 0) {
+						ResultSet generatedKeys = psInsertObject.getGeneratedKeys();
+						if (generatedKeys.next()) {
+							idObject = generatedKeys.getInt(1);
+							generatedKeys.close();
+						} else {
+							throw new SQLException("Erro ao inserir em Object");
+						}
+					} else {
+						throw new SQLException("Erro ao inserir em Object");
+					}
+				}
 				processLabels(idObject, dataDir);
 				System.out.println(dataDir);
-				System.out.println("Max Lat: " + maxLat);
-				System.out.println("Min Lat: " + minLat);
-				System.out.println("Max Lon: " + maxLon);
-				System.out.println("Min Lon: " + minLon);
 			}
 		}
+		System.out.println("Max Lat: " + maxLat);
+		System.out.println("Min Lat: " + minLat);
+		System.out.println("Max Lon: " + maxLon);
+		System.out.println("Min Lon: " + minLon);
 	}
 
 	@Test
@@ -276,12 +278,12 @@ public class GeoLifeETL {
 		}
 	}
 
-//	@Test
+	@Test
 	public void populateSubtrajectoryLine() {
 		try {
 			PreparedStatement psSelectSub = conn.prepareStatement("SELECT * FROM \"SemanticSubTrajectory\" ORDER BY \"idSemanticSubTrajectory\"");
-			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE \"SemanticSubTrajectory\" SET the_geom = ST_GeometryFromText(?, 4326) WHERE \"idSemanticSubTrajectory\" = ?");
-			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"SemanticPoint\" WHERE \"idSemanticSubTrajectory\" = ? ORDER BY timestamp");
+			PreparedStatement psUpdateSub = conn.prepareStatement("UPDATE \"SemanticSubTrajectory\" SET the_geom_aux = ST_GeometryFromText(?, 4326) WHERE \"idSemanticSubTrajectory\" = ?");
+			PreparedStatement psSelectPoints = conn.prepareStatement("SELECT ST_AsText(the_geom) FROM \"SemanticPoint\" WHERE \"idSemanticSubTrajectory\" = ? ORDER BY \"idSemanticPoint\"");
 			ResultSet rsSelectSub = psSelectSub.executeQuery();
 			while (rsSelectSub.next()) {
 				int idSub = rsSelectSub.getInt("idSemanticSubTrajectory");
