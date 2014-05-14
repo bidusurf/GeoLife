@@ -30,6 +30,7 @@ import java.util.TimeZone;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 public class GeoLifeETL {
 
@@ -57,7 +58,7 @@ public class GeoLifeETL {
 //			Class.forName("com.mysql.jdbc.Driver");
 			Class.forName("org.postgresql.Driver");
 //				conn = DriverManager.getConnection("jdbc:mysql://192.168.1.145:3306/tcc", "pedro", "bidu1");
-			conn = DriverManager.getConnection("jdbc:postgresql://192.168.1.105:5432/geolife", "postgres", "postgres");
+			conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/geolife", "postgres", "plunct!!!");
 			psSelectObject = conn.prepareStatement("SELECT \"idObject\" FROM \"Object\" WHERE name = ?");
 			psInsertObject = conn.prepareStatement("INSERT INTO \"Object\" (name) values (?)", Statement.RETURN_GENERATED_KEYS);
 			psInsertSemanticTrajectory = conn.prepareStatement("INSERT INTO \"SemanticTrajectory\" (\"idObject\") values (?)", 
@@ -71,6 +72,7 @@ public class GeoLifeETL {
 			psInsertSemanticPoint = conn.prepareStatement(
 					"INSERT INTO \"SemanticPoint\" (\"idSemanticSubTrajectory\", timestamp, the_geom) values (?, ?,  ST_GeometryFromText(?, 4326))");
 			conn.setAutoCommit(false);
+			
 		} catch (Exception e) {
 			fail();
 		}
@@ -121,13 +123,14 @@ public class GeoLifeETL {
 				System.out.print("\r" + ++insPoints);
 				double latitude = Double.parseDouble(fields[0]);
 				double longitude = Double.parseDouble(fields[1]);
-				latitude = latitude < -180 || latitude > 180 ? latitude / 10.0 : latitude;
-				longitude = longitude < -180 || longitude > 180 ? longitude / 10.0 : longitude;
 //				double altitude = Double.parseDouble(fields[2]);
 				minLat = Math.min(minLat, latitude);
 				maxLat = Math.max(maxLat, latitude);
 				minLon = Math.min(minLon, longitude);
 				maxLon = Math.max(maxLon, longitude);
+				if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+					continue;
+				}
 				Date timestamp = dateFormat.parse(fields[5].replace("-", "/") + " " + fields[6]);
 				int subTrajectoryId = findSubTrajectory(idObject, timestamp, localSemanticSubTrajectoryCandidates);
 				if (subTrajectoryId == 0) {
@@ -263,9 +266,10 @@ public class GeoLifeETL {
 	}
 
 	@Test
+//	@Ignore
 	public void testProcessDataDit() {
 		try {
-			processMainDir("C:\\Users\\pedro\\Ubuntu One\\TCC\\GeoLife\\Geolife Trajectories 1.2\\Data");
+			processMainDir("D:\\Geolife Trajectories 1.2\\Data");
 			conn.commit();
 		} catch (Exception e) {
 			e.printStackTrace();
